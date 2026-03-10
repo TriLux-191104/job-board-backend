@@ -1,6 +1,15 @@
-import { Controller, Get, Render } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Render,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppService } from './app.service';
+import { AuthGuard } from '@nestjs/passport';
+import { LocalAuthGuard } from './auth/local-auth.guard';
 
 @Controller()
 export class AppController {
@@ -9,9 +18,9 @@ export class AppController {
     private readonly configService: ConfigService,
   ) {}
 
-  @Get() // => api(restful)
-  @Render('home')
-  handleHomePage() {
-    console.log('check port = ', this.configService.get<string>('PORT'));
+  @UseGuards(LocalAuthGuard)
+  @Post('/login')
+  handleLogin(@Request() req) {
+    return req.user;
   }
 }
