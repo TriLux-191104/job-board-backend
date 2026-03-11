@@ -20,7 +20,6 @@ export class UsersController {
   create(@Body() createUserDto: CreateUserDto) {
     // Lấy dữ liệu từ req.body và ép thành CreateUserDto
     // @Body: req.body
-    console.log('Check create: ', createUserDto);
     return this.usersService.create(createUserDto);
   }
 

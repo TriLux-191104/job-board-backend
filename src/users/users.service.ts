@@ -29,6 +29,7 @@ export class UsersService {
       address: createUserDto.address,
       phone: createUserDto.address,
     });
+
     return user;
   }
 
@@ -37,6 +38,7 @@ export class UsersService {
   }
 
   findOne(id: string) {
+    // Kiểm tra id có đúng định dạng mongodb không, đỡ phải xuống làm phiền database.
     if (!mongoose.Types.ObjectId.isValid(id)) return 'not found user';
 
     return this.userModel.findOne({
