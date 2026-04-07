@@ -7,11 +7,17 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './passport/jwt.strategy';
 import ms from 'ms';
+import { AuthController } from './auth.controller';
+import { MongooseModule } from '@nestjs/mongoose';
+import { User } from 'src/decorator/customize';
+import { UserSchema } from 'src/users/schemas/user.schema';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
+
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
 
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -26,5 +32,6 @@ import ms from 'ms';
   ],
   providers: [AuthService, LocalStrategy, JwtStrategy],
   exports: [AuthService],
+  controllers: [AuthController],
 })
 export class AuthModule {}

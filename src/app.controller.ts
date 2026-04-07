@@ -21,16 +21,4 @@ export class AppController {
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
   ) {}
-
-  @Public()
-  @UseGuards(LocalAuthGuard)
-  @Post('/login')
-  handleLogin(@Request() req) {
-    return this.authService.login(req.user);
-  }
-
-  @Get('/profile')
-  getProfile(@Request() req) {
-    return req.user;
-  }
 }
