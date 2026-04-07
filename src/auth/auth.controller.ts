@@ -21,7 +21,7 @@ export class AuthController {
 
   @Public()
   @UseGuards(LocalAuthGuard)
-  @ResponseMessage('User Login')
+  @ResponseMessage('Login Successful')
   @Post('/login')
   handleLogin(@Req() req, @Res({ passthrough: true }) response: Response) {
     return this.authService.login(req.user, response);
@@ -49,5 +49,14 @@ export class AuthController {
   ) {
     const refreshToken = request.cookies['refresh_token'];
     return this.authService.processNewToken(refreshToken, response);
+  }
+
+  @ResponseMessage('Logout Successful')
+  @Post('/logout')
+  handleLogout(
+    @User() user: IUser,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.authService.logout(response, user);
   }
 }
