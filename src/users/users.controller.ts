@@ -20,11 +20,15 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @ResponseMessage('Create a user !')
-  create(@Body() createUserDto: CreateUserDto, @User() user: IUser) {
+  @ResponseMessage('Create a new user !')
+  async create(@Body() createUserDto: CreateUserDto, @User() user: IUser) {
+    const newUser = await this.usersService.create(createUserDto, user);
     // Lấy dữ liệu từ req.body và ép thành CreateUserDto
     // @Body: req.body
-    return this.usersService.create(createUserDto, user);
+    return {
+      _id: newUser?._id,
+      createdAt: newUser?.createdAt,
+    };
   }
 
   @Get()
@@ -38,17 +42,19 @@ export class UsersController {
     return this.usersService.findAll(+currentPage, +limit, qs);
   }
 
-  @Get(':id')
-  @ResponseMessage('Fetch list users !')
   @Public()
-  findOne(@Param('id') id: string) {
+  @Get(':id')
+  @ResponseMessage('Fetch user by ID !')
+  async findOne(@Param('id') id: string) {
+    const foundUser = await this.usersService.findOne(id);
     // const id:string = req.params.id;
-    return this.usersService.findOne(id);
+    return foundUser;
   }
 
   @Patch()
-  update(@Body() updateUserDto: UpdateUserDto, @User() user: IUser) {
-    return this.usersService.update(updateUserDto, user);
+  async update(@Body() updateUserDto: UpdateUserDto, @User() user: IUser) {
+    const updatedUser = await this.usersService.update(updateUserDto, user);
+    return updatedUser;
   }
 
   @Delete(':id')

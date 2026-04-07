@@ -1,19 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { CreateUserDto, RegisterUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User, UserDocument } from './schemas/user.schema';
+import { User as UserM, UserDocument } from './schemas/user.schema';
 import { genSaltSync, hashSync, compareSync } from 'bcryptjs';
 import { SoftDeleteModel } from 'soft-delete-plugin-mongoose';
 import { IUser } from './users.interface';
 import aqp from 'api-query-params';
+import { User } from 'src/decorator/customize';
 
 @Injectable() // Decorator: đánh dấu đây là provider có thêm được inject vào các class khác
 export class UsersService {
   // Inject (tiêm) Model User vào để sử dụng các hàm của Mongoose như create, find,...
   constructor(
-    @InjectModel(User.name) private userModel: SoftDeleteModel<UserDocument>,
+    @InjectModel(UserM.name) private userModel: SoftDeleteModel<UserDocument>,
   ) {}
 
   getHashPassword = (password: string) => {
@@ -22,11 +23,20 @@ export class UsersService {
     return hash;
   };
 
-  async create(user: CreateUserDto, author: IUser) {
-    const { name, email, password, age, gender, address, role, company } = user;
+  async create(createUserDto: CreateUserDto, @User() user: IUser) {
+    const { name, email, password, age, gender, address, role, company } =
+      createUserDto;
+
+    // Add logic check email
+    const isExit = await this.userModel.findOne({ email });
+    if (isExit) {
+      throw new BadRequestException(
+        `Email ${email} đã tồn tại. Vui lòng sử dụng email khác`,
+      );
+    }
 
     // Hash password
-    const hashPassword = this.getHashPassword(user.password);
+    const hashPassword = this.getHashPassword(password);
 
     // Lưu user mới vào MongoDB
     const newUser = await this.userModel.create({
@@ -37,25 +47,27 @@ export class UsersService {
       gender,
       address,
       role,
-      company: {
-        _id: user.company._id,
-        name: user.company.name,
-      },
+      company,
       createdBy: {
-        _id: author._id,
-        email: author.email,
+        _id: user._id,
+        email: user.email,
       },
     });
-    return {
-      _id: newUser?._id,
-      createdAt: newUser?.createdAt,
-    };
+    return newUser;
   }
 
   async register(user: RegisterUserDto) {
     const { name, email, password, age, gender, address } = user;
 
-    const hashPassword = this.getHashPassword(user.password);
+    // Add logic check email
+    const isExit = await this.userModel.findOne({ email });
+    if (isExit) {
+      throw new BadRequestException(
+        `Email ${email} đã tồn tại. Vui lòng sử dụng email khác`,
+      );
+    }
+
+    const hashPassword = this.getHashPassword(password);
 
     // Lưu user mới vào MongoDB
     const newRegister = await this.userModel.create({
@@ -65,6 +77,7 @@ export class UsersService {
       age,
       gender,
       address,
+      role: 'USER',
     });
 
     return newRegister;
@@ -86,6 +99,7 @@ export class UsersService {
       .skip(offset)
       .limit(defaultLimit)
       .sort(sort as any)
+      .select('-password')
       .populate(population)
       .exec();
 
@@ -100,13 +114,15 @@ export class UsersService {
     };
   }
 
-  findOne(id: string) {
+  async findOne(id: string) {
     // Kiểm tra id có đúng định dạng mongodb không, đỡ phải xuống làm phiền database.
     if (!mongoose.Types.ObjectId.isValid(id)) return 'not found user';
 
-    return this.userModel.findOne({
-      _id: id,
-    });
+    return this.userModel
+      .findOne({
+        _id: id,
+      })
+      .select('-password'); //exclude >< include
   }
 
   findOneByUsername(username: string) {
@@ -120,7 +136,7 @@ export class UsersService {
   }
 
   async update(updateUserDto: UpdateUserDto, user: IUser) {
-    return await this.userModel.updateOne(
+    const updated = await this.userModel.updateOne(
       {
         _id: updateUserDto._id,
       },
@@ -132,9 +148,14 @@ export class UsersService {
         },
       },
     );
+    return updated;
   }
 
   async remove(id: string, user: IUser) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return `not found user`;
+    }
+
     await this.userModel.updateOne(
       {
         _id: id,
