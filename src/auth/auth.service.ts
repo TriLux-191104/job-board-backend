@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import ms from 'ms';
 import { Response } from 'express';
 import { async } from 'rxjs';
+import { RolesService } from 'src/roles/roles.service';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +15,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly roleService: RolesService,
   ) {}
 
   // username, pass: là 2 tham số thư viện passport ném về
@@ -22,8 +24,16 @@ export class AuthService {
 
     if (user) {
       const isValid = this.usersService.isValidPassword(pass, user.password);
-      if (isValid) {
-        return user;
+      if (isValid === true) {
+        const userRole = user.role as unknown as { _id: string; name: string };
+        const temp = await this.roleService.findOne(userRole._id);
+
+        const objUser = {
+          ...user.toObject(),
+          permissions: temp?.permissions ?? [],
+        };
+
+        return objUser;
       }
     }
 
@@ -31,7 +41,7 @@ export class AuthService {
   }
 
   async login(user: IUser, response: Response) {
-    const { _id, name, email, role } = user;
+    const { _id, name, email, role, permissions } = user;
     const payload = {
       sub: 'token login',
       iss: 'from server',
@@ -58,6 +68,7 @@ export class AuthService {
         name,
         email,
         role,
+        permissions,
       },
     };
   }
@@ -103,6 +114,10 @@ export class AuthService {
         // Update user with refresh token
         await this.usersService.updateUserToken(refresh_token, _id.toString());
 
+        // fetch user's role
+        const userRole = user.role as unknown as { _id: string; name: string };
+        const temp = await this.roleService.findOne(userRole._id);
+
         // set refresh_token as cookies
         response.clearCookie('refresh_token');
 
@@ -118,6 +133,7 @@ export class AuthService {
             name,
             email,
             role,
+            permissions: temp?.permissions ?? [],
           },
         };
       } else {

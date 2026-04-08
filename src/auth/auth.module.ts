@@ -11,12 +11,13 @@ import { AuthController } from './auth.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User } from 'src/decorator/customize';
 import { UserSchema } from 'src/users/schemas/user.schema';
+import { RolesModule } from 'src/roles/roles.module';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
-
+    RolesModule,
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
 
     JwtModule.registerAsync({

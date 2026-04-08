@@ -9,12 +9,16 @@ import { SoftDeleteModel } from 'soft-delete-plugin-mongoose';
 import { IUser } from './users.interface';
 import aqp from 'api-query-params';
 import { User } from 'src/decorator/customize';
+import { Role, RoleDocument } from 'src/roles/schemas/role.entity';
+import { USER_ROLE } from 'src/databases/sample';
 
 @Injectable() // Decorator: đánh dấu đây là provider có thêm được inject vào các class khác
 export class UsersService {
   // Inject (tiêm) Model User vào để sử dụng các hàm của Mongoose như create, find,...
   constructor(
     @InjectModel(UserM.name) private userModel: SoftDeleteModel<UserDocument>,
+
+    @InjectModel(Role.name) private roleModel: SoftDeleteModel<RoleDocument>,
   ) {}
 
   getHashPassword = (password: string) => {
@@ -67,6 +71,9 @@ export class UsersService {
       );
     }
 
+    //fetch user role
+    const userRole = await this.roleModel.findOne({ name: USER_ROLE });
+
     const hashPassword = this.getHashPassword(password);
 
     // Lưu user mới vào MongoDB
@@ -77,7 +84,7 @@ export class UsersService {
       age,
       gender,
       address,
-      role: 'USER',
+      role: userRole?._id,
     });
 
     return newRegister;
@@ -122,13 +129,16 @@ export class UsersService {
       .findOne({
         _id: id,
       })
-      .select('-password'); //exclude >< include
+      .select('-password') //exclude >< include
+      .populate({ path: 'role', select: { name: 1, _id: 1 } });
   }
 
   findOneByUsername(username: string) {
-    return this.userModel.findOne({
-      email: username,
-    });
+    return this.userModel
+      .findOne({
+        email: username,
+      })
+      .populate({ path: 'role', select: { name: 1 } });
   }
 
   isValidPassword(password: string, hash: string) {
@@ -154,6 +164,11 @@ export class UsersService {
   async remove(id: string, user: IUser) {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return `not found user`;
+    }
+
+    const foundUser = await this.userModel.findById(id);
+    if (foundUser && foundUser.email == 'admin@gmail.com') {
+      throw new BadRequestException('Khong the xoa tk admin');
     }
 
     await this.userModel.updateOne(
@@ -185,8 +200,13 @@ export class UsersService {
   };
 
   findUserByToken = async (refreshToken: string) => {
-    return await this.userModel.findOne({
-      refreshToken,
-    });
+    return await this.userModel
+      .findOne({
+        refreshToken,
+      })
+      .populate({
+        path: 'role',
+        select: { name: 1 },
+      });
   };
 }
