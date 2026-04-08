@@ -11,7 +11,7 @@ import {
 import { JobsService } from './jobs.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
-import { ResponseMessage, User } from 'src/decorator/customize';
+import { Public, ResponseMessage, User } from 'src/decorator/customize';
 import { IUser } from 'src/users/users.interface';
 import { use } from 'passport';
 
@@ -26,6 +26,7 @@ export class JobsController {
   }
 
   @Get()
+  @Public()
   @ResponseMessage('Fetch List Jobs with paginate')
   findAll(
     @Query('current') currentPage: string, // const currentPage = req.query.page;
@@ -36,6 +37,7 @@ export class JobsController {
   }
 
   @Get(':id')
+  @Public()
   @ResponseMessage('Fetch Jobs by ID')
   findOne(@Param('id') id: string) {
     return this.jobsService.findOne(id);

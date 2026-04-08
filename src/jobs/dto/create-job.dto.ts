@@ -63,4 +63,7 @@ export class CreateJobDto {
   @IsNotEmpty({ message: 'isActive khong duoc de trong' })
   @IsBoolean({ message: 'isActive co dinh dang la Boolean' })
   isActive: boolean;
+
+  @IsNotEmpty({ message: 'location khong duoc de trong' })
+  location: string;
 }
