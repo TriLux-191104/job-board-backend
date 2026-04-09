@@ -93,7 +93,7 @@ export class RolesService {
     const foundRole = await this.roleModel.findById(id);
 
     if (foundRole.name == 'ADMIN') {
-      throw new BadRequestException('Khong the xoa role admin');
+      throw new BadRequestException('Khong the cap nhat role admin');
     }
 
     return await this.roleModel.updateOne(

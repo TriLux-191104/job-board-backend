@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { IS_PUBLIC_KEY } from 'src/decorator/customize';
+import { IS_PUBLIC_KEY, IS_PUBLIC_PERMISSION } from 'src/decorator/customize';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -19,6 +19,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       context.getHandler(),
       context.getClass(),
     ]);
+
     if (isPublic) {
       return true;
     }
@@ -27,6 +28,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   handleRequest(err, user, info, context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
+
+    const isSkipPermission = this.reflector.getAllAndOverride<boolean>(
+      IS_PUBLIC_PERMISSION,
+      [context.getHandler(), context.getClass()],
+    );
 
     // You can throw an exception based on either "info" or "err" arguments
     if (err || !user) {
@@ -40,17 +46,25 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     // check permissions
     const targetMethod = request.method;
-    const targetEndpoint = request.route?.path;
+    const targetEndpoint = request.route?.path as string;
 
     const permissions = user?.permissions ?? [];
-    const isExist = permissions.find(
+    let isExist = permissions.find(
       (permission) =>
         targetMethod === permission.method &&
         targetEndpoint === permission.apiPath,
     );
 
-    if (!isExist) {
-      throw new ForbiddenException('Banj khong co quyen de tuy cap endpoint');
+    if (targetEndpoint.startsWith('/api/v1/auth')) {
+      isExist = true;
+    }
+
+    if (!isExist && !isSkipPermission) {
+      throw new ForbiddenException('Ban khong co quyen truy cap endpoint nay');
+    }
+
+    if (user?.role?.name === 'SUPER_ADMIN') {
+      isExist = true;
     }
 
     return user;
